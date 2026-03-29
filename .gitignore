@@ -1,0 +1,32 @@
+# STM32 Ignore
+build/
+*.bin
+*.elf
+*.hex
+*.map
+*.lst
+*.o
+*.d
+*.su
+*.dep
+.vscode/
+.idea/
+
+# Keil Ignore
+*.uvoptx
+*.uvguix
+*.bak
+*.dep
+JLinkLog.txt
+*.scvd
+*.uvprojx.tmp
+Listings/
+Objects/
+RTE/
+
+# CubeMX Ignore
+.mxproject
+
+# OS Ignore
+Thumbs.db
+.DS_Store
