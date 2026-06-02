@@ -14,6 +14,12 @@
 
 这个项目实现了一台可识别、追踪并拾取网球的移动机器人。OpenMV 负责颜色视觉检测并输出目标坐标与局部图像，STM32H743 负责运动控制、舵机/电机驱动、LVGL 触摸屏界面和 FreeRTOS 任务调度，ESP32 提供 Wi-Fi 热点与 WebSocket 遥控页面。
 
+## Demo
+
+<video src="assets/demo.mp4" controls width="100%"></video>
+
+[Watch demo video](assets/demo.mp4)
+
 ## Highlights
 
 - OpenMV 视觉识别：基于 LAB 颜色阈值查找网球目标，输出中心点、目标窗口和 80x80 ROI 图像。
@@ -180,4 +186,4 @@ pio device monitor
 
 ## License
 
-当前仓库尚未声明开源许可证。如需公开复用或二次开发，建议补充 `LICENSE` 文件。
+This project is licensed under the [MIT License](LICENSE).
