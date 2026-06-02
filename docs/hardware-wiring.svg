@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860" role="img" aria-labelledby="title desc">
+  <title id="title">Hardware wiring diagram for the OpenMV STM32 tennis pickup robot</title>
+  <desc id="desc">STM32H743 wiring to OpenMV, ESP32, servo bus, motor driver, pickup enable, LCD touch module, power rails, and common ground.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#1f2937"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#059669"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ea580c"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .card { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 14; }
+      .hub { fill: #111827; stroke: #0f172a; stroke-width: 2; rx: 16; }
+      .title { font: 700 24px Arial, sans-serif; fill: #0f172a; }
+      .moduleTitle { font: 700 18px Arial, sans-serif; fill: #111827; }
+      .hubTitle { font: 700 22px Arial, sans-serif; fill: #ffffff; }
+      .pin { font: 600 14px Consolas, monospace; fill: #111827; }
+      .hubPin { font: 600 14px Consolas, monospace; fill: #e5e7eb; }
+      .note { font: 13px Arial, sans-serif; fill: #475569; }
+      .small { font: 12px Arial, sans-serif; fill: #475569; }
+      .wire { fill: none; stroke: #1f2937; stroke-width: 2.5; marker-end: url(#arrow); }
+      .wireBlue { fill: none; stroke: #2563eb; stroke-width: 2.5; marker-end: url(#arrowBlue); }
+      .wireGreen { fill: none; stroke: #059669; stroke-width: 2.5; marker-end: url(#arrowGreen); }
+      .wireOrange { fill: none; stroke: #ea580c; stroke-width: 2.5; marker-end: url(#arrowOrange); }
+      .wirePower { fill: none; stroke: #dc2626; stroke-width: 3; }
+      .wireGnd { fill: none; stroke: #475569; stroke-width: 3; stroke-dasharray: 7 6; }
+      .labelBox { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1; rx: 7; }
+      .label { font: 12px Arial, sans-serif; fill: #0f172a; }
+      .legend { font: 13px Arial, sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="860"/>
+  <text x="40" y="46" class="title">Hardware Wiring Overview</text>
+  <text x="40" y="72" class="note">Logic level: 3.3 V. Power high-current motors/servos from external supplies and tie every GND together.</text>
+
+  <rect x="470" y="150" width="340" height="520" class="hub"/>
+  <text x="590" y="185" class="hubTitle">STM32H743</text>
+  <text x="520" y="214" class="hubPin">UART4: PB8 RX, PB9 TX</text>
+  <text x="520" y="238" class="hubPin">SPI1 slave: PA15 NSS</text>
+  <text x="520" y="262" class="hubPin">PG11 SCK, PB5 MOSI, PG9 MISO</text>
+  <text x="520" y="294" class="hubPin">UART7: PA8 RX, PB4 TX</text>
+  <text x="520" y="326" class="hubPin">UART5: PB12 RX, PB13 TX</text>
+  <text x="520" y="360" class="hubPin">Motor PWM: PA0/PB3/PA2/PB11</text>
+  <text x="520" y="384" class="hubPin">Motor DIR: PC1 PC2 PC3 PC4</text>
+  <text x="520" y="408" class="hubPin">           PB0 PB1 PA3 PA4</text>
+  <text x="520" y="440" class="hubPin">Pickup EN: PC6</text>
+  <text x="520" y="472" class="hubPin">LCD/Touch: board connector</text>
+  <text x="520" y="508" class="hubPin">USART1 debug: PA9 TX, PA10 RX</text>
+  <text x="520" y="560" class="hubPin">3V3 logic / 5V board power</text>
+  <text x="520" y="586" class="hubPin">GND common reference</text>
+
+  <rect x="40" y="120" width="330" height="190" class="card"/>
+  <text x="72" y="154" class="moduleTitle">OpenMV Camera</text>
+  <text x="72" y="184" class="pin">UART3 TX -&gt; STM32 PB8 RX</text>
+  <text x="72" y="207" class="pin">UART3 RX &lt;- STM32 PB9 TX</text>
+  <text x="72" y="236" class="pin">SPI2 SCK -&gt; STM32 PG11 SCK</text>
+  <text x="72" y="259" class="pin">SPI2 MOSI -&gt; STM32 PB5 MOSI</text>
+  <text x="72" y="282" class="pin">P3 CS -&gt; STM32 PA15 NSS</text>
+  <text x="72" y="300" class="small">SPI2 pin silk-screen depends on OpenMV model.</text>
+
+  <rect x="40" y="355" width="330" height="155" class="card"/>
+  <text x="72" y="389" class="moduleTitle">ESP32 Remote Controller</text>
+  <text x="72" y="419" class="pin">GPIO17 TX2 -&gt; STM32 PA8 RX</text>
+  <text x="72" y="442" class="pin">GPIO16 RX2 &lt;- STM32 PB4 TX</text>
+  <text x="72" y="471" class="pin">AP: Tennis_Robot / 12345678</text>
+  <text x="72" y="493" class="small">Serial2, 115200 bps, 8N1.</text>
+
+  <rect x="40" y="555" width="330" height="145" class="card"/>
+  <text x="72" y="589" class="moduleTitle">Servo Bus / Pan-Tilt</text>
+  <text x="72" y="619" class="pin">PB13 UART5 TX -&gt; Servo RX</text>
+  <text x="72" y="642" class="pin">PB12 UART5 RX &lt;- Servo TX</text>
+  <text x="72" y="671" class="pin">External servo power + GND</text>
+  <text x="72" y="693" class="small">Keep servo supply GND tied to STM32 GND.</text>
+
+  <rect x="910" y="120" width="330" height="245" class="card"/>
+  <text x="942" y="154" class="moduleTitle">Motor Driver + 4 Wheels</text>
+  <text x="942" y="184" class="pin">Motor A RF: PA0 PWM, PC1/PC2 DIR</text>
+  <text x="942" y="207" class="pin">Motor B RR: PB3 PWM, PC3/PC4 DIR</text>
+  <text x="942" y="230" class="pin">Motor C LR: PA2 PWM, PB0/PB1 DIR</text>
+  <text x="942" y="253" class="pin">Motor D LF: PB11 PWM, PA3/PA4 DIR</text>
+  <text x="942" y="286" class="pin">VM: motor battery</text>
+  <text x="942" y="309" class="pin">GND: common with STM32</text>
+  <text x="942" y="337" class="small">Use a driver that accepts 3.3 V logic inputs.</text>
+
+  <rect x="910" y="410" width="330" height="125" class="card"/>
+  <text x="942" y="444" class="moduleTitle">Pickup Mechanism</text>
+  <text x="942" y="474" class="pin">STM32 PC6 -&gt; Pickup EN</text>
+  <text x="942" y="503" class="pin">Power from actuator supply</text>
+  <text x="942" y="523" class="small">Use a MOSFET/driver stage for high current loads.</text>
+
+  <rect x="910" y="580" width="330" height="120" class="card"/>
+  <text x="942" y="614" class="moduleTitle">RGB LCD + Touch</text>
+  <text x="942" y="644" class="pin">LTDC/FMC/Touch header</text>
+  <text x="942" y="672" class="pin">Connected through board FPC</text>
+  <text x="942" y="692" class="small">See CubeMX LTDC/FMC/touch pinout for board-level wiring.</text>
+
+  <rect x="420" y="730" width="440" height="82" class="card"/>
+  <text x="450" y="762" class="moduleTitle">Power Distribution</text>
+  <text x="450" y="790" class="pin">STM32/ESP32/OpenMV logic: 3.3 V or board VIN as required</text>
+  <text x="450" y="812" class="pin">Motors/servos/actuators: external supply, common GND</text>
+
+  <path class="wireBlue" d="M370 182 C425 182 425 214 470 214"/>
+  <rect x="390" y="161" width="92" height="22" class="labelBox"/>
+  <text x="399" y="177" class="label">OpenMV coords</text>
+
+  <path class="wireBlue" d="M470 234 C425 234 425 207 370 207"/>
+  <path class="wireGreen" d="M370 248 C425 248 425 258 470 258"/>
+  <path class="wireGreen" d="M370 270 C425 270 425 276 470 276"/>
+  <path class="wireGreen" d="M370 290 C425 290 425 238 470 238"/>
+  <rect x="390" y="286" width="92" height="22" class="labelBox"/>
+  <text x="403" y="302" class="label">ROI image</text>
+
+  <path class="wireBlue" d="M370 424 C425 424 425 294 470 294"/>
+  <path class="wireBlue" d="M470 312 C425 312 425 447 370 447"/>
+  <rect x="390" y="390" width="96" height="22" class="labelBox"/>
+  <text x="402" y="406" class="label">Web control</text>
+
+  <path class="wireOrange" d="M370 622 C425 622 425 326 470 326"/>
+  <path class="wireOrange" d="M470 344 C425 344 425 645 370 645"/>
+  <rect x="390" y="588" width="85" height="22" class="labelBox"/>
+  <text x="402" y="604" class="label">Servo bus</text>
+
+  <path class="wireOrange" d="M810 358 C860 358 860 214 910 214"/>
+  <path class="wireOrange" d="M810 382 C860 382 860 254 910 254"/>
+  <rect x="824" y="317" width="78" height="22" class="labelBox"/>
+  <text x="836" y="333" class="label">PWM/DIR</text>
+
+  <path class="wireOrange" d="M810 440 C860 440 860 474 910 474"/>
+  <rect x="824" y="445" width="70" height="22" class="labelBox"/>
+  <text x="840" y="461" class="label">Enable</text>
+
+  <path class="wire" d="M810 472 C860 472 860 644 910 644"/>
+  <rect x="824" y="541" width="69" height="22" class="labelBox"/>
+  <text x="837" y="557" class="label">Display</text>
+
+  <path class="wirePower" d="M640 670 L640 730"/>
+  <path class="wirePower" d="M640 730 C270 730 270 700 205 700"/>
+  <path class="wirePower" d="M640 730 C1010 730 1010 365 1075 365"/>
+  <path class="wirePower" d="M640 730 C1010 730 1010 535 1075 535"/>
+  <path class="wirePower" d="M640 730 C270 730 270 510 205 510"/>
+  <path class="wirePower" d="M640 730 C270 730 270 310 205 310"/>
+  <path class="wireGnd" d="M665 670 L665 730"/>
+  <path class="wireGnd" d="M665 730 C295 760 295 700 225 700"/>
+  <path class="wireGnd" d="M665 730 C1035 760 1035 365 1095 365"/>
+  <path class="wireGnd" d="M665 730 C1035 760 1035 535 1095 535"/>
+  <path class="wireGnd" d="M665 730 C295 760 295 510 225 510"/>
+  <path class="wireGnd" d="M665 730 C295 760 295 310 225 310"/>
+
+  <rect x="900" y="760" width="320" height="62" class="card"/>
+  <line x1="930" y1="782" x2="990" y2="782" class="wireBlue"/>
+  <text x="1005" y="787" class="legend">UART</text>
+  <line x1="930" y1="806" x2="990" y2="806" class="wireGreen"/>
+  <text x="1005" y="811" class="legend">SPI</text>
+  <line x1="1080" y1="782" x2="1140" y2="782" class="wireOrange"/>
+  <text x="1155" y="787" class="legend">Control</text>
+  <line x1="1080" y1="806" x2="1140" y2="806" class="wireGnd"/>
+  <text x="1155" y="811" class="legend">GND</text>
+</svg>

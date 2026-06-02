@@ -81,6 +81,25 @@ flowchart LR
 | 电机驱动与四轮底盘 | 前进、后退、转向、原地搜索 |
 | 拾取机构与舵机 | 网球拾取动作与机构控制 |
 
+## Hardware Wiring
+
+![Hardware wiring diagram](docs/hardware-wiring.svg)
+
+The diagram follows the pin assignments in `STM32H743.ioc`, `open_mv.py`, and `esp32/esp32/src/main.cpp`. Keep all logic signals at 3.3 V and connect every module to the same ground reference.
+
+| Link | STM32H743 side | External module side | Notes |
+| --- | --- | --- | --- |
+| OpenMV target UART | `PB8/UART4_RX`, `PB9/UART4_TX` | `UART3_TX`, `UART3_RX` | `115200 8N1`; coordinates frame `AA BB X Y 0D 0A` |
+| OpenMV ROI SPI | `PA15/SPI1_NSS`, `PG11/SPI1_SCK`, `PB5/SPI1_MOSI`, `PG9/SPI1_MISO` | `P3/CS`, `SPI2_SCK`, `SPI2_MOSI`, `SPI2_MISO` | STM32 is SPI slave; OpenMV is SPI master, mode 3 |
+| ESP32 remote | `PA8/UART7_RX`, `PB4/UART7_TX` | `GPIO17/TX2`, `GPIO16/RX2` | `115200 8N1`; WebSocket command bridge |
+| Servo bus | `PB13/UART5_TX`, `PB12/UART5_RX` | Servo RX/TX | Use an external servo supply and common GND |
+| Motor A / RF | `PA0/TIM2_CH1`, `PC1/AIN1`, `PC2/AIN2` | Motor driver PWM/DIR A | Right-front wheel |
+| Motor B / RR | `PB3/TIM2_CH2`, `PC3/BIN1`, `PC4/BIN2` | Motor driver PWM/DIR B | Right-rear wheel |
+| Motor C / LR | `PA2/TIM2_CH3`, `PB0/CIN1`, `PB1/CIN2` | Motor driver PWM/DIR C | Left-rear wheel |
+| Motor D / LF | `PB11/TIM2_CH4`, `PA3/DIN1`, `PA4/DIN2` | Motor driver PWM/DIR D | Left-front wheel |
+| Pickup enable | `PC6/PICKUP_EN` | Pickup driver EN | Drive high-current loads through a MOSFET/driver |
+| LCD + touch | LTDC/FMC/touch connector | RGB LCD/touch panel | Board-level FPC/header wiring |
+
 ## Communication Protocols
 
 ### OpenMV UART 坐标帧
