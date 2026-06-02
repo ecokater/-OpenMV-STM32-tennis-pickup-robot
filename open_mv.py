@@ -30,7 +30,7 @@ SERVO_UART_ID = 3
 SERVO_UART_BAUD = 115200
 
 # 颜色阈值（LAB）：格式为 (Lmin, Lmax, Amin, Amax, Bmin, Bmax)
-thresholds = [(0, 100, -67, -15, 22, 99)]
+thresholds = [(30, 100, -40, -12, 17, 80)]
 
 
 WIN_W = 80
@@ -71,15 +71,15 @@ def clamp(n, minn, maxn):
 
 def send_data(ball_x, ball_y):
     # 打包格式：0xAA + 0xBB + X(2字节) + Y(2字节) + 0x0D + 0x0A
-    ball_data = struct.pack("<BBHHBB", 0xAA, 0xBB, int(ball_x), int(ball_y), 0x0D, 0x0A)
+    ball_data = struct.pack("<BBhhBB", 0xAA, 0xBB, int(ball_x), int(ball_y), 0x0D, 0x0A)
     servo_uart.write(ball_data)
 
 
 ##spi发送数据与图像给stm32##
 def send_img(img, roi_x, roi_y):
-    header = struct.pack("<IHHHHHH", 0xDEADBEEF, roi_x, roi_y)
+    header = struct.pack("<IHH", 0xDEADBEEF, roi_x, roi_y)
     cs.value(0)
-    spi.write(bytearray(bytearray([0x00]*16))) # Dummy
+    spi.write(bytearray([0x00,0x00,0x00,0x00]))
     spi.write(header)
     spi.write(img.bytearray()) # Image (Zero-Copy)
     cs.value(1)
@@ -96,7 +96,7 @@ def crop_roi(src_img, roi_x, roi_y, roi_w, roi_h):
 
 
 def sensor_init():
-    # 相机初始化：一般放在主循环外，设置一次即可持续生效
+    # 相机初始化
     sensor.reset()
     sensor.set_pixformat(sensor.RGB565)
     sensor.set_framesize(sensor.VGA)
@@ -108,7 +108,7 @@ def sensor_init():
     sensor.set_auto_exposure(True, exposure_us=2000)
 
 def largest_blob(blobs):
-    # 从多个色块中选最大一个（像素最多的 blob）
+    # 从多个bolbs中选最大一个
     if not blobs:
         return None
     m = blobs[0]
@@ -133,9 +133,6 @@ def draw_target_overlay(target):
 
 async def vision_task():
     # 图像任务：
-    # 1) 采集一帧（IDE 自动显示）
-    # 2) 找球并绘制可视化
-    # 3) 发布 latest_target（通过 seq 让其他任务只处理“新事件”）
     global img, frame_w, frame_h
     global latest_target, latest_target_seq
     while True:
@@ -146,6 +143,7 @@ async def vision_task():
 
         img.draw_string(0, 0, "FPS:%d" % clock.fps(), color=(255, 255, 255))
 
+        target = None
         blobs = img.find_blobs(thresholds, pixels_threshold=50, area_threshold=50, merge=True)
         if blobs:
             b = largest_blob(blobs)
@@ -155,15 +153,36 @@ async def vision_task():
                 r = max(b.w(), b.h()) // 2
                 target = {"cx": cx, "cy": cy, "r": r, "blob": b}
                 draw_target_overlay(target)
-
+        if target:
                 latest_target = target
                 latest_target_seq += 1
+        else:
+            latest_target = None
 
         await asyncio.sleep_ms(0)
 
 
-async def telemetry_task():
-    global latest_target_seq
+def calc_target_window():
+    # 统一计算目标坐标与ROI窗口，避免UART任务和SPI任务重复逻辑
+    fw = frame_w if frame_w > 0 else MAX_W
+    fh = frame_h if frame_h > 0 else MAX_H
+    roi_x = (fw - WIN_W) // 2
+    roi_y = (fh - WIN_H) // 2
+    if latest_target:
+        ball_x = latest_target["cx"]
+        ball_y = latest_target["cy"]
+        target_x = ball_x - (WIN_W // 2)
+        target_y = ball_y - (WIN_H // 2)
+        roi_x = clamp(target_x, 0, fw - WIN_W)
+        roi_y = clamp(target_y, 0, fh - WIN_H)
+    else:
+        ball_x = -1
+        ball_y = -1
+    return ball_x, ball_y, roi_x, roi_y
+
+
+async def uart_task():
+    # UART任务
     last_send = 0
     while True:
         if img is None:
@@ -174,34 +193,32 @@ async def telemetry_task():
             await asyncio.sleep_ms(0)
             continue
         last_send = now
-        fw = frame_w if frame_w > 0 else MAX_W
-        fh = frame_h if frame_h > 0 else MAX_H
-        roi_x = (fw - WIN_W) // 2
-        roi_y = (fh - WIN_H) // 2
-        if latest_target:
-            ball_x = latest_target["cx"]
-            ball_y = latest_target["cy"]
-            target_x = ball_x - (WIN_W // 2)
-            target_y = ball_y - (WIN_H // 2)
-            roi_x = clamp(target_x, 0, fw - WIN_W)
-            roi_y = clamp(target_y, 0, fh - WIN_H)
-        else:
-            ball_x = fw // 2
-            ball_y = fh // 2
+        ball_x, ball_y, _, _ = calc_target_window()
+        send_data(ball_x, ball_y)
+        await asyncio.sleep_ms(10)
+
+
+async def spi_task():
+    # SPI任务
+    last_send = 0
+    while True:
+        if img is None:
+            await asyncio.sleep_ms(0)
+            continue
+        now = time.ticks_ms()
+        if time.ticks_diff(now, last_send) < 50:
+            await asyncio.sleep_ms(0)
+            continue
+        last_send = now
+        _, _, roi_x, roi_y = calc_target_window()
         cut_img = crop_roi(img, roi_x, roi_y, WIN_W, WIN_H)
-
-        # 优化：优先发送 UART 控制数据（数据量小，重要性高）
-        send_data(ball_x, ball_y)#uart
-
-        # 其次发送 SPI 图像数据（数据量大，耗时较长）
-        send_img(cut_img, roi_x, roi_y)#spi
-
-        # 非阻塞延时，让出 CPU 给其他任务，同时控制发送频率
-        await asyncio.sleep_ms(0)
+        send_img(cut_img, roi_x, roi_y)
+        await asyncio.sleep_ms(30)
 
 async def main():
-    # 主入口：启动 4 个协作式任务
-    asyncio.create_task(telemetry_task())
+    # UART与SPI并发
+    asyncio.create_task(uart_task())
+    asyncio.create_task(spi_task())
     await vision_task()
 
 sensor_init()

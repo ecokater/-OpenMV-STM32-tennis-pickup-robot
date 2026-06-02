@@ -7,8 +7,8 @@ extern "C" {
 
 #include "main.h"
 
-#define OPENMV_IMG_W 160
-#define OPENMV_IMG_H 120
+#define OPENMV_IMG_W 80
+#define OPENMV_IMG_H 80
 #define OPENMV_IMG_BYTES (OPENMV_IMG_W * OPENMV_IMG_H * 2)
 
 

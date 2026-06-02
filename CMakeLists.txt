@@ -64,9 +64,15 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Drivers/USER/Src/lcd_image.c
     Drivers/USER/Src/lcd_rgb.c
     Drivers/USER/Src/lcd_test.c
+    Drivers/USER/Src/car_ball_pid.c
+    Drivers/USER/Src/car_remote_ui.c
+    Drivers/USER/Src/carcontrol.c
+    Drivers/USER/Src/esp32_link.c
     Drivers/USER/Src/led.c
+    Drivers/USER/Src/motor.c
     Drivers/USER/Src/openmv_spi.c
     Drivers/USER/Src/openmv_uart.c
+    Drivers/USER/Src/servo_uart5.c
     Drivers/USER/Src/sdram.c
     Drivers/USER/Src/usart.c
     Drivers/USER/Src/touch_800x480.c

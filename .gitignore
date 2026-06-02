@@ -1,32 +1,47 @@
-# STM32 Ignore
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+__MACOSX/
+
+# Editor and IDE state
+.vscode/
+.idea/
+.cache/
+*.swp
+*.swo
+
+# Build outputs
 build/
-*.bin
+Build/
+Debug/
+Release/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
 *.elf
 *.hex
+*.bin
 *.map
 *.lst
 *.o
+*.obj
 *.d
+*.dep
 *.su
-*.dep
-.vscode/
-.idea/
 
-# Keil Ignore
-*.uvoptx
-*.uvguix
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+compile_commands.json
+
+# Logs and temporary files
+*.log
+*.tmp
 *.bak
-*.dep
-JLinkLog.txt
-*.scvd
-*.uvprojx.tmp
-Listings/
-Objects/
-RTE/
+*.orig
 
-# CubeMX Ignore
-.mxproject
-
-# OS Ignore
-Thumbs.db
-.DS_Store
+# Nested repositories copied from generated/exported projects
+**/.git/

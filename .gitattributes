@@ -1,0 +1,13 @@
+* text=auto
+*.c text
+*.h text
+*.cpp text
+*.py text
+*.md text
+*.ioc text
+*.ld text
+*.s text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary

@@ -143,7 +143,7 @@ void openmv_process(void)
   /* 获取当前要处理的 buffer 指针 */
   uint8_t *current_buffer = spi_rx_buffer[process_idx];
   
-  /* 使 Cache 无效（虽然 MPU 已配置，但双保险） */
+  /* 使 Cache 无效 */
   SCB_InvalidateDCache_by_Addr((uint32_t*)current_buffer, RX_BUFFER_SIZE);
   
   /* 智能查找帧头与Bit Shift修复 */
@@ -226,7 +226,7 @@ void openmv_process(void)
     }
     data_seq++;
   }
-  /* 注意：如果帧头无效，我们不再 Abort，因为 DMA 已经在中断里重启了 */
+  /* 注意：如果帧头无效，不再 Abort，因为 DMA 已经在中断里重启了 */
   if (p_data == NULL)
   {
       /* 严重错误：找不到帧头，说明 SPI 接收已经完全错位 */

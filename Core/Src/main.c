@@ -24,6 +24,9 @@
 /* USER CODE BEGIN Includes */
 #include "mysys.h"
 #include "led.h"
+#include "motor.h"
+#include "car_remote_ui.h"
+#include "carcontrol.h"
 #include "usart.h"
 #include "sdram.h"  
 #include "lcd_rgb.h"
@@ -31,6 +34,9 @@
 
 #include "openmv_spi.h"
 #include "openmv_uart.h"
+#include "car_ball_pid.h"
+#include "esp32_link.h"
+#include "servo_uart5.h"
 #include "ui.h"
 
 #include "lcd_test.h"
@@ -51,7 +57,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define DEBUG_UART_LOG_ENABLE 0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -77,8 +83,11 @@ SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi5;
 DMA_HandleTypeDef hdma_spi1_rx;
 
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
+UART_HandleTypeDef huart7;
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_uart4_rx;
 
@@ -91,6 +100,7 @@ osThreadId ledTaskHandle;
 osThreadId fputTaskHandle;
 osThreadId takeDataTaskHandle;
 osThreadId processTaskHandle;
+osThreadId servoTrackTaskHandle;
 
 /* USER CODE END PV */
 
@@ -112,6 +122,8 @@ static void MX_LTDC_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_UART4_Init(void);
 static void MX_UART5_Init(void);
+static void MX_TIM2_Init(void);
+static void MX_UART7_Init(void);
 void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
@@ -120,12 +132,14 @@ void StartLedTask(void const * argument);
 void StartFputTask(void const * argument);
 void StartTakeDataTask(void const * argument);
 void StartOpenmvProcessTask(void const * argument);
+void StartServoTrackTask(void const * argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 static uint8_t g_defer_ltdc_init = 1;
+static uint8_t g_servo_task_enabled = 0;
 
 /* USER CODE END 0 */
 
@@ -179,12 +193,17 @@ int main(void)
   MX_SPI1_Init();
   MX_UART4_Init();
   MX_UART5_Init();
+  MX_TIM2_Init();
+  MX_UART7_Init();
   /* USER CODE BEGIN 2 */
   User_MX_FMC_Init();
   g_defer_ltdc_init = 0;
   MX_LTDC_Init();
   User_MX_LTDC_Init();
   User_USART1_Init();
+  motor_init();
+  car_init();
+  servo_startup_self_test();
   LED_Init();
   Touch_Init();				// 触摸屏初始化	
 
@@ -195,6 +214,7 @@ int main(void)
   ui_init();   
   lv_sysmon_show_performance(NULL);
   openmv_spi_init();
+
 
   /* USER CODE END 2 */
 
@@ -207,6 +227,7 @@ int main(void)
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
+
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
@@ -223,17 +244,34 @@ int main(void)
   osThreadDef(ledTask, StartLedTask, osPriorityLow, 0, 128);
   ledTaskHandle = osThreadCreate(osThread(ledTask), NULL);
   /* add threads, ... */
-  osThreadDef(fputTask, StartFputTask, osPriorityNormal, 0, 1024);
-  fputTaskHandle = osThreadCreate(osThread(fputTask), NULL);
+  if (DEBUG_UART_LOG_ENABLE != 0)
+  {
+    osThreadDef(fputTask, StartFputTask, osPriorityLow, 0, 512);
+    fputTaskHandle = osThreadCreate(osThread(fputTask), NULL);
+  }
+  else
+  {
+    fputTaskHandle = NULL;
+  }
   
   /* 专门用于 OpenMV 数据处理的高优先级任务 */
-  /* 栈大小根据 openmv_process 的实际需求调整，512通常足够 */
-  osThreadDef(takeDataTask, StartTakeDataTask, osPriorityHigh, 0, 512);
+  osThreadDef(takeDataTask, StartTakeDataTask, osPriorityHigh, 0, 384);
   takeDataTaskHandle = osThreadCreate(osThread(takeDataTask), NULL);
   
   /* 专门负责 SPI 图像处理的高优先级任务 */
-  osThreadDef(processTask, StartOpenmvProcessTask, osPriorityNormal, 0, 512);
+  osThreadDef(processTask, StartOpenmvProcessTask, osPriorityNormal, 0, 384);
   processTaskHandle = osThreadCreate(osThread(processTask), NULL);
+
+  osThreadDef(servoTrackTask, StartServoTrackTask, osPriorityHigh, 0, 256);
+  servoTrackTaskHandle = osThreadCreate(osThread(servoTrackTask), NULL);
+  if (servoTrackTaskHandle == NULL)
+  {
+    g_servo_task_enabled = 0;
+  }
+  else
+  {
+    g_servo_task_enabled = 1;
+  }
   
   /* USER CODE END RTOS_THREADS */
 
@@ -662,6 +700,77 @@ static void MX_SPI5_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 24-1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 1000-1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
+
+}
+
+/**
   * @brief UART4 Initialization Function
   * @param None
   * @retval None
@@ -754,6 +863,54 @@ static void MX_UART5_Init(void)
   /* USER CODE BEGIN UART5_Init 2 */
 
   /* USER CODE END UART5_Init 2 */
+
+}
+
+/**
+  * @brief UART7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART7_Init(void)
+{
+
+  /* USER CODE BEGIN UART7_Init 0 */
+
+  /* USER CODE END UART7_Init 0 */
+
+  /* USER CODE BEGIN UART7_Init 1 */
+
+  /* USER CODE END UART7_Init 1 */
+  huart7.Instance = UART7;
+  huart7.Init.BaudRate = 115200;
+  huart7.Init.WordLength = UART_WORDLENGTH_8B;
+  huart7.Init.StopBits = UART_STOPBITS_1;
+  huart7.Init.Parity = UART_PARITY_NONE;
+  huart7.Init.Mode = UART_MODE_TX_RX;
+  huart7.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart7.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart7.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart7.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart7.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart7, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart7, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART7_Init 2 */
+
+  /* USER CODE END UART7_Init 2 */
 
 }
 
@@ -878,6 +1035,7 @@ static void MX_FMC_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 /* USER CODE BEGIN MX_GPIO_Init_1 */
 /* USER CODE END MX_GPIO_Init_1 */
 
@@ -893,6 +1051,46 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(PICKUP_EN_GPIO_Port, PICKUP_EN_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, AIN1_Pin|AIN2_Pin|BIN1_Pin|BIN2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, CIN2_Pin|CIN1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, DIN1_Pin|DIN2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PC6 */
+  GPIO_InitStruct.Pin = PICKUP_EN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(PICKUP_EN_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : AIN1_Pin AIN2_Pin BIN1_Pin BIN2_Pin */
+  GPIO_InitStruct.Pin = AIN1_Pin|AIN2_Pin|BIN1_Pin|BIN2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : CIN2_Pin CIN1_Pin */
+  GPIO_InitStruct.Pin = CIN2_Pin|CIN1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : DIN1_Pin DIN2_Pin */
+  GPIO_InitStruct.Pin = DIN1_Pin|DIN2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -914,13 +1112,42 @@ void StartTakeDataTask(void const * argument)
 {
     /* 初始化 UART4 DMA 接收 */
     openmv_uart_init();
+    esp32_control_init();
+    car_ball_pid_init();
+    if (g_servo_task_enabled == 0)
+    {
+        servo_pid_init();
+    }
     
     for(;;)
     {
         /* 处理 UART4 数据 */
         openmv_uart_process();
+        esp32_control_process();
+        if (esp32_control_get_mode() == ESP32_CONTROL_MODE_PICKUP)
+        {
+            if (g_servo_task_enabled == 0)
+            {
+                servo_pid_track_from_uart();
+            }
+            car_ball_pid_track_from_uart();
+        }
         
         osDelay(1);
+    }
+}
+
+void StartServoTrackTask(void const * argument)
+{
+    servo_pid_init();
+
+    for(;;)
+    {
+        if (esp32_control_get_mode() == ESP32_CONTROL_MODE_PICKUP)
+        {
+            servo_pid_track_from_uart();
+        }
+        osDelay(5);
     }
 }
 
@@ -995,6 +1222,15 @@ void StartFputTask(void const * argument)
   */
 
 
+
+
+
+
+
+
+
+
+
   ///////////////////图像显示//////////////////////////////////////
 /* OpenMV Canvas 相关变量 */
 static lv_obj_t *openmv_canvas = NULL;
@@ -1048,6 +1284,7 @@ void StartDefaultTask(void const * argument)
   /* 如果 ui_init 在 StartDefaultTask 之前调用过，这里可以直接创建 */
   /* 为了安全，我们假设 ui_init 已经在 main() 里调过了，或者这里可以加个延时 */
   osDelay(100); 
+  car_remote_ui_init();
   app_create_openmv_canvas();
   
   /* Infinite loop */

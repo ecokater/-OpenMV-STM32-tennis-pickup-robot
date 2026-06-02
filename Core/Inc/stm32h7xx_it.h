@@ -57,6 +57,8 @@ void DMA1_Stream1_IRQHandler(void);
 void TIM1_UP_IRQHandler(void);
 void SPI1_IRQHandler(void);
 void UART4_IRQHandler(void);
+void UART5_IRQHandler(void);
+void UART7_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 void LTDC_IRQHandler(void);
 /* USER CODE END EFP */
