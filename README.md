@@ -1,6 +1,10 @@
 # OpenMV STM32 Tennis Pickup Robot
 
 <p align="center">
+  <a href="README.md">中文</a> | <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <strong>基于 OpenMV + STM32H743 + ESP32 的智能网球捡球机器人</strong>
 </p>
 
@@ -14,13 +18,13 @@
 
 这个项目实现了一台可识别、追踪并拾取网球的移动机器人。OpenMV 负责颜色视觉检测并输出目标坐标与局部图像，STM32H743 负责运动控制、舵机/电机驱动、LVGL 触摸屏界面和 FreeRTOS 任务调度，ESP32 提供 Wi-Fi 热点与 WebSocket 遥控页面。
 
-## Demo
+## 演示
 
 <video src="assets/demo.mp4" controls width="100%"></video>
 
-[Watch demo video](assets/demo.mp4)
+[观看演示视频](assets/demo.mp4)
 
-## Highlights
+## 项目亮点
 
 - OpenMV 视觉识别：基于 LAB 颜色阈值查找网球目标，输出中心点、目标窗口和 80x80 ROI 图像。
 - STM32 主控闭环：通过 UART 接收目标坐标，使用 PID/滤波逻辑控制小车对准、前进、搜索和拾取。
@@ -29,7 +33,7 @@
 - 触摸屏交互：STM32 集成 LVGL 界面、RGB LCD、触摸输入和运行状态显示。
 - 工程化结构：包含 STM32CubeMX/CMake 工程、OpenMV 单文件脚本和 PlatformIO ESP32 工程。
 
-## Architecture
+## 系统架构
 
 ```mermaid
 flowchart LR
@@ -42,7 +46,7 @@ flowchart LR
     STM32 --> Pickup[拾取机构使能]
 ```
 
-## Repository Layout
+## 目录结构
 
 ```text
 .
@@ -70,9 +74,9 @@ flowchart LR
 └── README.md
 ```
 
-## Hardware
+## 硬件组成
 
-| Module | Role |
+| 模块 | 作用 |
 | --- | --- |
 | STM32H743 | 主控、任务调度、电机/舵机/屏幕/通信管理 |
 | OpenMV | 网球颜色识别、坐标输出、ROI 图像裁剪 |
@@ -81,26 +85,26 @@ flowchart LR
 | 电机驱动与四轮底盘 | 前进、后退、转向、原地搜索 |
 | 拾取机构与舵机 | 网球拾取动作与机构控制 |
 
-## Hardware Wiring
+## 硬件接线
 
-![Hardware wiring diagram](docs/hardware-wiring.svg)
+![硬件接线示意图](docs/hardware-wiring.svg)
 
-The diagram follows the pin assignments in `STM32H743.ioc`, `open_mv.py`, and `esp32/esp32/src/main.cpp`. Keep all logic signals at 3.3 V and connect every module to the same ground reference.
+示意图依据 `STM32H743.ioc`、`open_mv.py` 和 `esp32/esp32/src/main.cpp` 中的引脚分配绘制。所有逻辑信号保持 3.3 V，并确保所有模块共地。
 
-| Link | STM32H743 side | External module side | Notes |
+| 连接 | STM32H743 侧 | 外部模块侧 | 说明 |
 | --- | --- | --- | --- |
 | OpenMV target UART | `PB8/UART4_RX`, `PB9/UART4_TX` | `UART3_TX`, `UART3_RX` | `115200 8N1`; coordinates frame `AA BB X Y 0D 0A` |
-| OpenMV ROI SPI | `PA15/SPI1_NSS`, `PG11/SPI1_SCK`, `PB5/SPI1_MOSI`, `PG9/SPI1_MISO` | `P3/CS`, `SPI2_SCK`, `SPI2_MOSI`, `SPI2_MISO` | STM32 is SPI slave; OpenMV is SPI master, mode 3 |
-| ESP32 remote | `PA8/UART7_RX`, `PB4/UART7_TX` | `GPIO17/TX2`, `GPIO16/RX2` | `115200 8N1`; WebSocket command bridge |
-| Servo bus | `PB13/UART5_TX`, `PB12/UART5_RX` | Servo RX/TX | Use an external servo supply and common GND |
-| Motor A / RF | `PA0/TIM2_CH1`, `PC1/AIN1`, `PC2/AIN2` | Motor driver PWM/DIR A | Right-front wheel |
-| Motor B / RR | `PB3/TIM2_CH2`, `PC3/BIN1`, `PC4/BIN2` | Motor driver PWM/DIR B | Right-rear wheel |
-| Motor C / LR | `PA2/TIM2_CH3`, `PB0/CIN1`, `PB1/CIN2` | Motor driver PWM/DIR C | Left-rear wheel |
-| Motor D / LF | `PB11/TIM2_CH4`, `PA3/DIN1`, `PA4/DIN2` | Motor driver PWM/DIR D | Left-front wheel |
-| Pickup enable | `PC6/PICKUP_EN` | Pickup driver EN | Drive high-current loads through a MOSFET/driver |
-| LCD + touch | LTDC/FMC/touch connector | RGB LCD/touch panel | Board-level FPC/header wiring |
+| OpenMV ROI SPI | `PA15/SPI1_NSS`, `PG11/SPI1_SCK`, `PB5/SPI1_MOSI`, `PG9/SPI1_MISO` | `P3/CS`, `SPI2_SCK`, `SPI2_MOSI`, `SPI2_MISO` | STM32 为 SPI 从机；OpenMV 为 SPI 主机，模式 3 |
+| ESP32 remote | `PA8/UART7_RX`, `PB4/UART7_TX` | `GPIO17/TX2`, `GPIO16/RX2` | `115200 8N1`; WebSocket 指令桥接 |
+| Servo bus | `PB13/UART5_TX`, `PB12/UART5_RX` | 舵机 RX/TX | 使用独立舵机电源并共地 |
+| Motor A / RF | `PA0/TIM2_CH1`, `PC1/AIN1`, `PC2/AIN2` | 电机驱动 PWM/DIR A | 右前轮 |
+| Motor B / RR | `PB3/TIM2_CH2`, `PC3/BIN1`, `PC4/BIN2` | 电机驱动 PWM/DIR B | 右后轮 |
+| Motor C / LR | `PA2/TIM2_CH3`, `PB0/CIN1`, `PB1/CIN2` | 电机驱动 PWM/DIR C | 左后轮 |
+| Motor D / LF | `PB11/TIM2_CH4`, `PA3/DIN1`, `PA4/DIN2` | 电机驱动 PWM/DIR D | 左前轮 |
+| Pickup enable | `PC6/PICKUP_EN` | 拾取机构驱动 EN | 大电流负载需通过 MOSFET/驱动级控制 |
+| LCD + touch | LTDC/FMC/触摸接口 | RGB LCD/触摸屏 | 板级 FPC/排针连接 |
 
-## Communication Protocols
+## 通信协议
 
 ### OpenMV UART 坐标帧
 
@@ -110,7 +114,7 @@ OpenMV 通过 UART3 发送小端坐标帧，STM32 使用 UART4 + DMA 解析：
 AA BB XX XX YY YY 0D 0A
 ```
 
-| Field | Size | Description |
+| 字段 | 大小 | 说明 |
 | --- | --- | --- |
 | `AA BB` | 2 bytes | 帧头 |
 | `XX XX` | int16 little-endian | 网球中心 X 坐标，未检测到时为 `-1` |
@@ -136,15 +140,15 @@ Password: 12345678
 
 浏览器连接 ESP32 后可以切换手动/拾取模式，并发送方向控制指令。STM32 侧由 `esp32_link.c` 解析并转化为车辆动作。
 
-## Quick Start
+## 快速开始
 
-### 1. Flash OpenMV
+### 1. 烧录 OpenMV
 
 1. 使用 OpenMV IDE 打开 `open_mv.py`。
 2. 根据实际光照调整 `thresholds` LAB 阈值。
 3. 将脚本保存到 OpenMV 板载文件系统，通常可命名为 `main.py` 以便上电自启动。
 
-### 2. Build STM32 Firmware
+### 2. 构建 STM32 固件
 
 使用 STM32CubeIDE 打开 `STM32H743.ioc`，或使用 CMake 构建：
 
@@ -155,7 +159,7 @@ cmake --build --preset Debug
 
 如果你使用自己的 GCC Arm 工具链，请先确认 `cmake/gcc-arm-none-eabi.cmake` 中的路径配置与本机环境一致。
 
-### 3. Flash ESP32 Remote Controller
+### 3. 烧录 ESP32 遥控端
 
 ```bash
 cd esp32/esp32
@@ -166,9 +170,9 @@ pio device monitor
 
 烧录完成后，连接 `Tennis_Robot` 热点，在浏览器打开 ESP32 地址即可进入遥控页面。
 
-## Key Source Files
+## 核心源码
 
-| File | Description |
+| 文件 | 说明 |
 | --- | --- |
 | `open_mv.py` | OpenMV 单文件视觉任务，负责检测网球并通过 UART/SPI 输出 |
 | `Drivers/User/Src/car_ball_pid.c` | 自动寻球、对准、靠近、拾取保持和丢失目标搜索 |
@@ -178,7 +182,7 @@ pio device monitor
 | `Drivers/User/Src/esp32_link.c` | ESP32 遥控命令接收与模式切换 |
 | `esp32/esp32/src/main.cpp` | ESP32 AP、Web 页面、WebSocket 服务和串口下发 |
 
-## Tuning
+## 参数调试
 
 - 颜色阈值：在 `open_mv.py` 的 `thresholds` 中调整 LAB 范围。
 - 跟踪速度：在 `car_ball_pid.c` 中调整 `CAR_TRACK_SPEED_KP/KI/KD`、最大 PWM 和死区。
@@ -186,9 +190,9 @@ pio device monitor
 - 拾取触发：调整 `CAR_TRACK_PICKUP_TARGET_Y`、`CAR_TRACK_CLOSE_PICKUP_Y` 和保持时间。
 - 串口速率：OpenMV、STM32 与 ESP32 默认使用 `115200`。
 
-## Troubleshooting
+## 常见问题
 
-| Problem | Check |
+| 问题 | 检查项 |
 | --- | --- |
 | OpenMV 检测不到网球 | 检查光照、白平衡、LAB 阈值和球体面积阈值 |
 | STM32 收不到坐标 | 检查 UART 引脚、波特率、DMA 是否启动、帧头帧尾是否一致 |
@@ -196,13 +200,13 @@ pio device monitor
 | 小车抖动或冲过目标 | 降低 PID 增益、最大 PWM 或增大转向死区 |
 | ESP32 页面打不开 | 确认已连接 `Tennis_Robot` 热点，并查看串口监视器输出 |
 
-## Roadmap
+## 路线图
 
 - [ ] 增加硬件接线图和实物图片。
 - [ ] 补充 OpenMV 阈值标定流程。
 - [ ] 增加 STM32/ESP32 固件版本发布包。
 - [ ] 增加自动化构建说明或 GitHub Actions。
 
-## License
+## 开源许可
 
-This project is licensed under the [MIT License](LICENSE).
+本项目基于 [MIT License](LICENSE) 开源。
